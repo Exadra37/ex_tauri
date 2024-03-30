@@ -1,0 +1,7 @@
+.database/
+burrito_out/
+tauri-apps/
+deps/
+*.dump
+_build/
+priv/static/
