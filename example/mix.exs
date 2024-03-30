@@ -41,12 +41,14 @@ defmodule ExampleDesktop.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.19.0"},
       {:floki, ">= 0.30.0", only: :test},
-      {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
+      {:esbuild, "~> 0.7", only: :dev},
+      {:tailwind, "~> 0.2.0", only: :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
+      # For developemnt uncomment out below line and comment out the next one
+      # {:ex_tauri, path: "../"}
       {:ex_tauri, git: "https://github.com/filipecabaco/ex_tauri.git"}
     ]
   end
@@ -79,7 +81,8 @@ defmodule ExampleDesktop.MixProject do
         steps: [:assemble, &Burrito.wrap/1],
         burrito: [
           targets: [
-            "aarch64-apple-darwin": [os: :darwin, cpu: :aarch64]
+            "aarch64-apple-darwin": [os: :darwin, cpu: :aarch64],
+            "x86_64-unknown-linux-gnu": [os: :linux, cpu: :x86_64],
           ]
         ]
       ]

@@ -1,5 +1,5 @@
 defmodule ExTauri do
-  @latest_version "1.4.0"
+  @latest_version "1.5.11"
 
   use Application
   require Logger
@@ -211,12 +211,12 @@ defmodule ExTauri do
     description = ""
 
     [build-dependencies]
-    tauri-build = "1.4.0"
+    tauri-build = "1"
 
     [dependencies]
     serde_json = "1.0"
     serde = { version = "1.0", features = ["derive"] }
-    tauri = { version = "1.4.1",features = ["api-all"] }
+    tauri = { version = "1",features = ["api-all"] }
 
     [features]
     # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

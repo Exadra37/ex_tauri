@@ -6,7 +6,7 @@
     "distDir": "http://localhost:4000"
   },
   "package": {
-    "productName": "example_desktop",
+    "productName": "Example Desktop",
     "version": "0.1.0"
   },
   "tauri": {
@@ -67,11 +67,11 @@
     },
     "windows": [
       {
+        "title": "Example Desktop",
+        "width": 800,
         "fullscreen": false,
         "height": 600,
-        "resizable": true,
-        "title": "Example Desktop",
-        "width": 800
+        "resizable": true
       }
     ]
   }

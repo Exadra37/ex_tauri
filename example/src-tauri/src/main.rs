@@ -28,7 +28,7 @@ fn start_server() {
 }
 
 fn check_server_started() {
-    let sleep_interval = std::time::Duration::from_secs(1);
+    let sleep_interval = std::time::Duration::from_millis(200);
     let host = "localhost".to_string();
     let port = "4000".to_string();
     let addr = format!("{}:{}", host, port);

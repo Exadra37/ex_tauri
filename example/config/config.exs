@@ -6,20 +6,36 @@
 
 # General application configuration
 import Config
-config :ex_tauri, version: "1.4.0", app_name: "Example Desktop", host: "localhost", port: 4000
+
+host = System.get_env("PHX_HOST") || "localhost"
+scheme = System.get_env("HTTP_SCHEME") || "http"
+port = String.to_integer(System.get_env("PORT") || "4000")
+
+config :ex_tauri,
+  version: "1.5.11",
+  app_name: "Example Desktop",
+  host: host,
+  scheme: scheme,
+  port: port
 
 config :example_desktop,
-  ecto_repos: [ExampleDesktop.Repo]
+  ecto_repos: [ExampleDesktop.Repo],
+  generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
 config :example_desktop, ExampleDesktopWeb.Endpoint,
-  url: [host: "localhost"],
+  url: [host: host, port: port, scheme: scheme],
+  http: [
+    port: port,
+    ip: {0, 0, 0, 0},
+  ],
   render_errors: [
     formats: [html: ExampleDesktopWeb.ErrorHTML, json: ExampleDesktopWeb.ErrorJSON],
     layout: false
   ],
   pubsub_server: ExampleDesktop.PubSub,
   live_view: [signing_salt: "NEH6yDum"]
+
 
 # Configure esbuild (the version is required)
 config :esbuild,
