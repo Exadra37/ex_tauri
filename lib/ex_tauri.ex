@@ -22,12 +22,12 @@ defmodule ExTauri do
   def latest_version, do: @latest_version
 
   def install(extra_args \\ []) do
-    app_name = Application.get_env(:ex_tauri, :app_name, "Phoenix Application")
+    app_name = get_app_name()
     window_title = Application.get_env(:ex_tauri, :window_title, app_name)
     scheme = Application.get_env(:ex_tauri, :scheme) || "http"
     host = Application.get_env(:ex_tauri, :host) || raise "Expected :host to be configured"
     port = Application.get_env(:ex_tauri, :port) || raise "Expected :port to be configured"
-    version = Application.get_env(:ex_tauri, :version) || latest_version()
+    version = Application.get_env(:ex_tauri, :cli_version) || latest_version()
     fullscreen = Application.get_env(:ex_tauri, :fullscreen, false)
     height = Application.get_env(:ex_tauri, :height, 600)
     width = Application.get_env(:ex_tauri, :width, 800)
@@ -93,6 +93,16 @@ defmodule ExTauri do
       Path.join([File.cwd!(), "src-tauri", "src", "build.rs"])
     )
 
+    # File.cp!(
+    #   Path.join([File.cwd!(), "bin", "tauri.sh"]),
+    #   Path.join([File.cwd!(), "tauri"])
+    # )
+
+    # The build name needs to be unique, otherwise any app built by burrito will always
+    # be installed in the same path on the target
+    release_name = build_release_name()
+    burrito_output = "../burrito_out/#{release_name}"
+
     # Add side car and required configuration to tauri.conf.json
     Path.join([File.cwd!(), "src-tauri", "tauri.conf.json"])
     |> File.read!()
@@ -100,7 +110,7 @@ defmodule ExTauri do
     |> then(fn content ->
       content
       |> put_in(["package", "productName"], app_name)
-      |> put_in(["tauri", "bundle", "externalBin"], ["../burrito_out/desktop"])
+      |> put_in(["tauri", "bundle", "externalBin"], [burrito_output])
       |> put_in(
         ["tauri", "bundle", "identifier"],
         "you.app.#{app_name |> String.replace("\s", "") |> Macro.underscore() |> String.replace("_", "-")}"
@@ -108,7 +118,7 @@ defmodule ExTauri do
       |> put_in(["tauri", "allowlist"], %{
         shell: %{
           sidecar: true,
-          scope: [%{name: "../burrito_out/desktop", sidecar: true, args: ["start"]}]
+          scope: [%{name: burrito_output, sidecar: true, args: ["start"]}]
         }
       })
       |> put_in(["tauri", "windows"], [
@@ -176,13 +186,35 @@ defmodule ExTauri do
       |> System.cmd(args, opts)
   end
 
+  defp get_app_name() do
+    Application.get_env(:ex_tauri, :app_name) || raise "Provide the :app_name in your app config for :ex_tauri"
+  end
+
+  def build_package_name() do
+    get_app_name()
+    |> String.replace("\s", "")
+    |> Macro.underscore()
+  end
+
+  # The release name needs to be unique, otherwise any app built by burrito will always
+  # be installed in the same path on the target
+  defp build_release_name() do
+    "desktop_#{build_package_name()}"
+  end
+
   defp wrap() do
-    File.rm_rf!(Path.join([Path.expand("~"), "Library", "Application Support", ".burrito"]))
 
-    get_in(Mix.Project.config(), [:releases, :desktop]) ||
-      raise "expected a burrito release configured for the app :desktop in your mix.exs"
+    # File.rm_rf!(Path.join([Path.expand("~"), "Library", "Application Support", ".burrito"]))
 
-    Mix.Task.run("release", ["desktop"])
+    release_name = build_release_name()
+
+    releases = get_in(Mix.Project.config(), [:releases, release_name |> String.to_atom()]) ||
+      raise "expected a burrito release configured for the app #{release_name} in your mix.exs"
+
+    dbg(releases)
+
+    # Mix.Task.run("release", [release_name])
+    Mix.Task.run("release")
 
     triplet =
       System.cmd("rustc", ["-Vv"])
@@ -190,43 +222,71 @@ defmodule ExTauri do
       |> then(&Regex.run(~r/host: (.*)/, &1))
       |> Enum.at(1)
 
+dbg(triplet)
+
+    # File.cp!(
+    #   "burrito_out/desktop_todo_trek_#{triplet}",
+    #   "burrito_out/desktop_todo_trek-#{triplet}"
+    # )
+
     File.cp!(
-      "burrito_out/desktop_#{triplet}",
-      "burrito_out/desktop-#{triplet}"
+      "burrito_out/desktop_todo_trek_#{triplet}",
+      "burrito_out/desktop_todo_trek-#{triplet}"
     )
 
     :ok
   end
 
   defp cargo_toml(app_name) do
-    app_name = app_name |> String.replace("\s", "") |> Macro.underscore()
+    package_name = build_package_name()
+    # release_name = build_release_name()
+    version = Application.get_env(:ex_tauri, :app_version, "0.1.0")
+    description = Application.get_env(:ex_tauri, :app_description, "A Phoenix Tauri App")
+    authors = Application.get_env(:ex_tauri, :app_authors, [app_name]) |> Enum.join("\",\"")
+    app_license = Application.get_env(:ex_tauri, :app_license, "Proprietary")
+    app_homepage = Application.get_env(:ex_tauri, :app_homepage, "example.com")
+    app_repository = Application.get_env(:ex_tauri, :app_repository, "example.com")
+    rust_edition = Application.get_env(:ex_tauri, :rust_edition, "2021")
+
+    [_, rust_version | _rest ] = System.cmd("rustc", ["--version"])
+      |> elem(0)
+      |> String.split(" ")
 
     """
     [package]
-    name = "#{app_name}"
-    version = "0.1.0"
-    default-run = "#{app_name}"
-    edition = "2018"
-    build = "src/build.rs"
-    description = ""
+    name = "#{package_name}"
+    version = "#{version}"
+    description = "#{description}"
+    authors = ["#{authors}"]
+    license = "#{app_license}"
+    homepage = "#{app_homepage}"
+    repository = "#{app_repository}"
+    default-run = "#{package_name}"
+    edition = "#{rust_edition}"
+    rust-version = "#{rust_version}"
 
     [build-dependencies]
-    tauri-build = "1"
+    tauri-build = { version = "1", features = [] }
 
     [dependencies]
     serde_json = "1.0"
     serde = { version = "1.0", features = ["derive"] }
-    tauri = { version = "1",features = ["api-all"] }
+    tauri = { version = "1", features = [ "shell-sidecar"] }
 
     [features]
-    # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
-    # If you use cargo directly instead of tauri's cli you can use this feature flag to switch between tauri's `dev` and `build` modes.
-    # DO NOT REMOVE!!
+    # by default Tauri runs in production mode
+    # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
+    default = [ "custom-protocol" ]
+
+    # this feature is used for production builds where `devPath` points to the filesystem
+    # DO NOT remove this
     custom-protocol = [ "tauri/custom-protocol" ]
     """
   end
 
   defp main_src(host, port) do
+    release_name = build_release_name()
+
     """
     // Prevents additional console window on Windows in release, DO NOT REMOVE!!
     #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -244,10 +304,10 @@ defmodule ExTauri do
     }
     fn start_server() {
         tauri::async_runtime::spawn(async move {
-            let (mut rx, mut _child) = Command::new_sidecar("desktop")
-                .expect("failed to setup `desktop` sidecar")
+            let (mut rx, mut _child) = Command::new_sidecar("#{release_name}")
+                .expect("failed to setup `#{release_name}` sidecar")
                 .spawn()
-                .expect("Failed to spawn packaged node");
+                .expect("Failed to spawn sidecar for #{release_name}");
 
             while let Some(event) = rx.recv().await {
                 if let CommandEvent::Stdout(line) = event {
@@ -263,12 +323,13 @@ defmodule ExTauri do
         let port = "#{port}".to_string();
         let addr = format!("{}:{}", host, port);
         println!(
-            "Waiting for your phoenix dev server to start on {}...",
+            "Waiting for your phoenix dev server to start on {}",
             addr
         );
         loop {
             if std::net::TcpStream::connect(addr.clone()).is_ok() {
-               break;
+              println!(".");
+              break;
             }
             std::thread::sleep(sleep_interval);
         }
