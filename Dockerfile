@@ -13,106 +13,48 @@ ENV DOCKER_ZIG_VERSION=0.11.0
 ARG NODE_VERSION=20
 ENV DOCKER_NODE_VERSION=${NODE_VERSION}
 
-ARG DOCKER_BUILD_SCRIPTS_RELEASE=dev-wip
-
-ARG CONTAINER_USER_NAME="developer"
-ARG CONTAINER_UID="1000"
-ARG CONTAINER_GID="1000"
+ARG HOST_USER_NAME="developer"
+ARG HOST_UID="1000"
+ARG HOST_GID="1000"
 ARG OH_MY_ZSH_THEME="amuse"
 
-ARG LANGUAGE=""
-ARG LANGUAGE_CODE="C"
-ARG LOCALE_SEPARATOR=""
-ARG COUNTRY_CODE=""
-ARG ENCODING="UTF-8"
-ARG LOCALE_STRING="${LANGUAGE_CODE}${LOCALE_SEPARATOR}${COUNTRY_CODE}"
-ARG LOCALIZATION="${LOCALE_STRING}.${ENCODING}"
-ARG DOCKER_BUILD_SCRIPTS_RELEASE=dev-wip
+ENV HOST_USER_NAME=${HOST_USER_NAME} \
+    HOST_HOME=/home/${HOST_USER_NAME} \
+    HOST_UID=${HOST_UID} \
+    HOST_GID=${HOST_GID}
 
-ENV LANG="${LOCALIZATION}" \
-  LC_ALL="${LOCALIZATION}" \
-  LANGUAGE="${LANGUAGE}" \
-  DOCKER_BUILD="/docker-build" \
-  WORKSPACE_PATH="/home/${CONTAINER_USER_NAME}/workspace" \
-  CONTAINER_USER_NAME="${CONTAINER_USER_NAME}" \
-  CONTAINER_HOME="/home/${CONTAINER_USER_NAME}" \
-  CONTAINER_BIN_PATH="/home/${CONTAINER_USER_NAME}/bin" \
-  CONTAINER_UID=${CONTAINER_UID} \
-  CONTAINER_GID=${CONTAINER_GID}
+ENV WORKSPACE_PATH=${HOST_HOME}/workspace
+
+USER root
+WORKDIR /
+
+RUN apt update
+RUN apt -y install --no-install-recommends build-essential
+RUN apt -y install --no-install-recommends curl
 
 
-###########################################
-#  DEV ENVIRONMENT CUSTOMIZATION
-###########################################
+##############
+# HOST USER
+##############
 
-RUN \
-  apt update && \
-  apt -y upgrade && \
-  apt -y -q install --no-install-recommends \
-    ca-certificates \
-    build-essential \
-    ssh \
-    less \
-    nano \
-    zsh \
-    unzip \
-    curl \
-    git && \
-
-  mkdir -p "${DOCKER_BUILD}" && \
-
-  curl \
-    -fsSl \
-    -o archive.tar.gz \
-    https://gitlab.com/exadra37-bash/docker/bash-scripts-for-docker-builds/-/archive/"${DOCKER_BUILD_SCRIPTS_RELEASE}"/bash-scripts-for-docker-builds-dev.tar.gz?path=scripts && \
-
-  tar xf archive.tar.gz -C "${DOCKER_BUILD}" --strip 1 && \
-  rm -vf archive.tar.gz && \
-
-  "${DOCKER_BUILD}"/scripts/utils/debian/add-user-with-bin-folder.sh \
-    "${CONTAINER_USER_NAME}" \
-    "${CONTAINER_UID}" \
-    "/usr/bin/zsh" \
-    "${CONTAINER_BIN_PATH}" && \
-
-  # "${DOCKER_BUILD}"/scripts/debian/install/locales.sh \
-  #   "${LOCALIZATION}" \
-  #   "${ENCODING}" && \
-
-  "${DOCKER_BUILD}"/scripts/debian/install/inotify-tools.sh && \
-
-  "${DOCKER_BUILD}"/scripts/debian/install/oh-my-zsh.sh \
-    "${CONTAINER_HOME}" \
-    "${OH_MY_ZSH_THEME}" && \
-
-  "${DOCKER_BUILD}"/scripts/utils/create-workspace-dir.sh \
-    "${WORKSPACE_PATH}" \
-    "${CONTAINER_USER_NAME}"
-
-RUN mkdir -p ~/.config ~/.local ~/.cache
-
-RUN chown -R "${CONTAINER_USER_NAME}":"${CONTAINER_USER_NAME}" /home/"${CONTAINER_USER_NAME}"
+RUN groupadd -g "${HOST_GID}" "${HOST_USER_NAME}" && \
+    useradd --create-home --uid "${HOST_UID}" --gid "${HOST_GID}" "${HOST_USER_NAME}"
+RUN mkdir -p "${HOST_HOME}"/.config "${HOST_HOME}"/.local/{bin,share} "${HOST_HOME}"/.cache
+RUN chown -R "${HOST_USER_NAME}":"${HOST_USER_NAME}" "${HOST_HOME}"
 
 
-##########################
-# NODEJS STACK
-##########################
+###############
+#  OH MY ZSH
+###############
 
-RUN "${DOCKER_BUILD}"/scripts/nodejs/install.sh "${NODE_VERSION}"
+RUN apt -y install --no-install-recommends git
+RUN apt -y install --no-install-recommends zsh
 
+USER "${HOST_USER_NAME}"
+WORKDIR "${HOST_HOME}"
 
-##########################
-# PHOENIX STACK
-##########################
-
-USER "${CONTAINER_USER_NAME}"
-WORKDIR "${CONTAINER_HOME}"
-
-RUN mix local.hex --force
-RUN mkdir /home/"${CONTAINER_USER_NAME}"/.ssh
-RUN ssh-keyscan -t rsa github.com >>  /home/"${CONTAINER_USER_NAME}"/.ssh/known_hosts
-RUN ssh-keyscan -t rsa gitlab.com >> /home/"${CONTAINER_USER_NAME}"/.ssh/known_hosts
-RUN "${DOCKER_BUILD}"/scripts/elixir/phoenix/install-from-git-branch.bash "${PHOENIX_VERSION}"
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+RUN sed -i "s/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"${OH_MY_ZSH_THEME}\"/g" "${HOST_HOME}"/.zshrc
 
 
 #########
@@ -120,7 +62,7 @@ RUN "${DOCKER_BUILD}"/scripts/elixir/phoenix/install-from-git-branch.bash "${PHO
 #########
 
 USER root
-WORKDIR /opt
+WORKDIR /
 
 RUN curl https://ziglang.org/download/"${ZIG_VERSION}"/zig-linux-x86_64-"${ZIG_VERSION}".tar.xz -o zig.tar.xz
 RUN tar -xf zig.tar.xz
@@ -128,6 +70,41 @@ RUN mv zig-linux-x86_64-"${ZIG_VERSION}" /opt/zig-"${ZIG_VERSION}"
 
 ENV PATH=/opt/zig-"${ZIG_VERSION}":$PATH
 
+
+##########################
+# NODEJS STACK
+##########################
+
+RUN curl -sL https://deb.nodesource.com/setup_"${NODE_VERSION}".x | sh -
+RUN apt update
+RUN apt install -y --no-install-recommends nodejs
+
+
+
+RUN apt install -y --no-install-recommends ssh
+
+
+##########################
+# PHOENIX STACK
+##########################
+
+USER "${HOST_USER_NAME}"
+WORKDIR "${HOST_HOME}"
+
+# installs the package manager
+RUN mix local.hex --force
+
+# installs rebar and rebar3
+RUN mix local.rebar --force
+ENV PATH="${HOST_HOME}"/.mix:${PATH}
+
+# COMPILE AND INSTALL PHOENIX FROM SOURCE
+RUN git clone --depth 1 --branch "v${PHOENIX_VERSION}" https://github.com/phoenixframework/phoenix.git
+
+WORKDIR "${HOST_HOME}/phoenix/installer"
+RUN MIX_ENV=prod mix do archive.build, archive.install --force
+RUN cd ../../ && rm -rf phoenix
+RUN mix phx.new --version
 
 
 ########################
@@ -138,19 +115,20 @@ USER root
 WORKDIR /
 
 # @link https://tauri.app/v1/guides/getting-started/prerequisites#setting-up-linux
-RUN apt update
-RUN	apt -y install --no-install-recommends libwebkit2gtk-4.0-dev
-RUN	apt -y install --no-install-recommends build-essential
-RUN	apt -y install --no-install-recommends curl
-RUN	apt -y install --no-install-recommends wget
-RUN	apt -y install --no-install-recommends file
-RUN	apt -y install --no-install-recommends libssl-dev
-RUN	apt -y install --no-install-recommends libgtk-3-dev
-RUN	apt -y install --no-install-recommends libayatana-appindicator3-dev
-RUN	apt -y install --no-install-recommends librsvg2-dev
+RUN apt -y install --no-install-recommends libwebkit2gtk-4.0-dev
+# RUN apt -y install --no-install-recommends curl
+RUN apt -y install --no-install-recommends wget
+RUN apt -y install --no-install-recommends build-essential
+RUN apt -y install --no-install-recommends file
+RUN apt -y install --no-install-recommends libssl-dev
+RUN apt -y install --no-install-recommends libgtk-3-dev
+RUN apt -y install --no-install-recommends libayatana-appindicator3-dev
+RUN apt -y install --no-install-recommends librsvg2-dev
 
-USER "${CONTAINER_USER_NAME}"
-WORKDIR "${CONTAINER_HOME}"
+RUN apt -y install --no-install-recommends clang
+
+USER "${HOST_USER_NAME}"
+WORKDIR "${HOST_HOME}"
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=${RUST_VERSION} -y
 ENV PATH="~/.cargo/bin:$PATH"
@@ -158,6 +136,8 @@ RUN bash -c "cargo --version"
 RUN bash -c "cargo install tauri-cli"
 RUN bash -c "cargo install create-tauri-app"
 RUN bash -c "cargo install -f cross"
+RUN bash -c "rustup target add x86_64-apple-darwin"
+RUN bash -c "rustup target add x86_64-pc-windows-gnu"
 
 # @error Strip call failed: /tmp/appimage_*: Unable to recognise the format of the input file `example-desktop.AppDir/usr/lib/librsvg-2.so'
 # @link https://github.com/tauri-apps/tauri/issues/8929#issuecomment-1956338150
@@ -167,11 +147,17 @@ ENV NO_STRIP=true
 # @link https://github.com/AppImage/AppImageKit/issues/912#issuecomment-528669441
 ENV APPIMAGE_EXTRACT_AND_RUN=1
 
+USER root
+WORKDIR /
+
+RUN apt -y install --no-install-recommends p7zip-full
+
 
 ########################
 # START - WORKSPACE
 ########################
 
+USER "${HOST_USER_NAME}"
 WORKDIR "${WORKSPACE_PATH}"
 
 CMD ["zsh"]
