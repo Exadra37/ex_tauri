@@ -74,8 +74,8 @@ defmodule ExTauri.Tauri.BundleRelease do
   end
 
   defp build_tauri_for_target(target, release_name, platform, args) do
-    os = target |> Keyword.get(:os)
-    cpu = target |> Keyword.get(:cpu)
+    os = target |> Keyword.get(:os) |> Atom.to_string()
+    cpu = target |> Keyword.get(:cpu) |> Atom.to_string()
     compiler_type = target |> Keyword.get(:x_compiler_type)
     target_triple = build_target_triple(platform, cpu, os, compiler_type)
 
