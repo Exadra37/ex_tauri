@@ -100,8 +100,7 @@ defmodule ExTauri do
 
     # The build name needs to be unique, otherwise any app built by burrito will always
     # be installed in the same path on the target
-    release_name = build_release_name()
-    burrito_output = "../burrito_out/#{release_name}"
+    burrito_output = "../#{build_burrito_output_partial_path()}"
 
     # Add side car and required configuration to tauri.conf.json
     Path.join([File.cwd!(), "src-tauri", "tauri.conf.json"])
@@ -166,18 +165,121 @@ defmodule ExTauri do
   Runs the given command with `args`.
 
   The given args will be appended to the configured args.
-  The task output will be streamed directly to stdio. It
-  returns the status of the underlying call.
+  The task output will be streamed directly to stdio.
+  It returns the status of the underlying call.
   """
-  def run(args) when is_list(args) do
-    wrap()
+  def run([]) do
+    Mix.shell().error("---> Please provide the command to run, e.g build")
+  end
 
-    # Set proper environment variables for tauri
+  def run(args) when is_list(args) do
+    Mix.Project.config()
+    |> Keyword.get(:releases)
+    |> build_phoenix_releases(args)
+  end
+
+  defp build_phoenix_releases([], _args) do
+    Mix.shell().error("---> project/1 is missing :releases configured on your mix.exs")
+  end
+
+  defp build_phoenix_releases(releases, args) do
+    with [] <- validate_releases_config(releases) do
+      releases
+      |> Enum.map(fn {release_name, release_config} ->build_phoenix_release(release_name, release_config, args) end)
+
+    else
+      errors ->
+        errors
+        |> Enum.each(fn error -> Mix.shell().error("---> #{error}") end)
+    end
+  end
+
+  defp validate_releases_config(releases) do
+    releases
+    |> Enum.reduce([], fn release, acc -> validate_release_config(release, acc) end)
+  end
+
+  defp validate_release_config({release_name, release_config}, errors) do
+    burrito_config = Keyword.get(release_config, :burrito)
+
+    if is_nil(burrito_config) do
+      ["expected a burrito release configured for the app #{release_name} in your mix.exs" | errors]
+    else
+      errors
+    end
+  end
+
+  defp build_phoenix_release(release_name, release_config, args) when is_atom(release_name) do
+    release_name
+    |> Atom.to_string()
+    |> build_phoenix_release(release_config, args)
+  end
+
+  defp build_phoenix_release(release_name, release_config, args) do
+    release_name
+    |> burrito_wrap_release()
+    |> build_tauri_release(release_config, args)
+  end
+
+  defp burrito_wrap_release(release_name) do
+    Mix.Task.run("release", [release_name])
+    release_name
+  end
+
+  def build_tauri_release(_release_name, release_config, args) do
     System.put_env("TAURI_SKIP_DEVSERVER_CHECK", "true")
+
+    burrito_config = Keyword.get(release_config, :burrito)
+
+    targets = Keyword.get(burrito_config, :targets)
+    dbg(targets)
+
+      targets
+      |> Enum.each(fn
+        {platform, target}->
+          build_tauri_for_target(target, platform, args)
+        end)
+  end
+
+  defp build_tauri_for_target(target, platform, args) do
+      platform =  Atom.to_string(platform)
+
+    os = target |> Keyword.get(:os) |> Atom.to_string()
+    cpu = target |> Keyword.get(:cpu) |> Atom.to_string()
+
+    target_triple =
+       case platform do
+        "linux" ->
+          cpu <> "-" <> "unknown-linux-gnu"
+
+        "windows" ->
+          cpu <> "-" <> "pc-windows-gnu"
+
+        platform when platform in ["macos", "macos_m1"] ->
+          cpu <> "-" <> "apple" <> "-" <> os
+      end
+
+    dbg(target_triple)
+
+    tripplet =
+      System.cmd("rustc", ["-Vv"])
+      |> elem(0)
+      |> then(&Regex.run(~r/host: (.*)/, &1))
+      |> Enum.at(1)
+
+    dbg(tripplet)
+
+    rename_burrito_output(platform, target_triple)
+
+    args =
+      args
+      |> List.insert_at( -1, "--target")
+      |> List.insert_at( -1, target_triple)
+    dbg(args)
 
     opts = [
       into: IO.stream(:stdio, :line),
-      stderr_to_stdout: true
+      stderr_to_stdout: true,
     ]
 
     {_, 0} =
@@ -202,44 +304,28 @@ defmodule ExTauri do
     "desktop_#{build_package_name()}"
   end
 
-  defp wrap() do
+  defp build_burrito_output_partial_path() do
+    "burrito_out/#{build_release_name()}"
+  end
 
-    # File.rm_rf!(Path.join([Path.expand("~"), "Library", "Application Support", ".burrito"]))
+  defp rename_burrito_output("windows", target_triple) do
+    rename_burrito_output("windows.exe", target_triple)
+  end
 
-    release_name = build_release_name()
+  defp rename_burrito_output(platform, target_triple) do
+    burrito_output = build_burrito_output_partial_path()
 
-    releases = get_in(Mix.Project.config(), [:releases, release_name |> String.to_atom()]) ||
-      raise "expected a burrito release configured for the app #{release_name} in your mix.exs"
+    from = burrito_output <> "_" <> platform
+    to = burrito_output <> "-" <>  target_triple
 
-    dbg(releases)
+    dbg(from)
+    dbg(to)
 
-    # Mix.Task.run("release", [release_name])
-    Mix.Task.run("release")
-
-    triplet =
-      System.cmd("rustc", ["-Vv"])
-      |> elem(0)
-      |> then(&Regex.run(~r/host: (.*)/, &1))
-      |> Enum.at(1)
-
-dbg(triplet)
-
-    # File.cp!(
-    #   "burrito_out/desktop_todo_trek_#{triplet}",
-    #   "burrito_out/desktop_todo_trek-#{triplet}"
-    # )
-
-    File.cp!(
-      "burrito_out/desktop_todo_trek_#{triplet}",
-      "burrito_out/desktop_todo_trek-#{triplet}"
-    )
-
-    :ok
+    File.rename(from, to)
   end
 
   defp cargo_toml(app_name) do
     package_name = build_package_name()
-    # release_name = build_release_name()
     version = Application.get_env(:ex_tauri, :app_version, "0.1.0")
     description = Application.get_env(:ex_tauri, :app_description, "A Phoenix Tauri App")
     authors = Application.get_env(:ex_tauri, :app_authors, [app_name]) |> Enum.join("\",\"")
