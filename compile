@@ -22,6 +22,8 @@ set -eu
 # Cross Compile
 ##################
 #
+# @link Github action: https://github.com/tauri-apps/tauri-action
+# @link Windows: https://github.com/tauri-apps/tauri/issues/1114
 # @link https://jamwaffles.github.io/rust/2019/02/17/rust-cross-compile-linux-to-macos.html
 # @link https://github.com/dockcross/dockcross
 # @link https://github.com/cross-rs/cross-toolchains?tab=readme-ov-file#apple-targets
@@ -87,16 +89,18 @@ Docker_Build_Tauri() {
 }
 
 Docker_Run_Tauri() {
-	mkdir -p .local/.burrito_file_cache
+	# local _burrito_cache_dir=.cache/burrito_file_cache
+	# local _local_burrito_cache_dir=.local/.cache/burrito_file_cache
+	# mkdir -p "${_local_burrito_cache_dir}"
 
+		# --volume "${_local_burrito_cache_dir}":$PWD/"${_burrito_cache_dir}" \
 	sudo docker run \
 		-it \
 		--rm \
 		--name "${CONTAINER_NAME}" \
-		--publish 4400:4000 \
+		--publish 4800:4000 \
 		--workdir $PWD \
 		--volume $PWD:$PWD \
-		--volume $PWD/.local/.burrito_file_cache:$PWD/.cache/burrito_file_cache \
 		"${TAURI_CONTAINER_IMAGE}" "${COMMAND}" "${@}"
 }
 

@@ -6,6 +6,6 @@ defmodule Mix.Tasks.ExTauri do
 
   @impl true
   def run(args) do
-    ExTauri.run(args)
+    ExTauri.bundle_release(args)
   end
 end

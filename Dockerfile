@@ -29,6 +29,7 @@ USER root
 WORKDIR /
 
 RUN apt update
+RUN apt -y install --no-install-recommends inotify-tools
 RUN apt -y install --no-install-recommends build-essential
 RUN apt -y install --no-install-recommends curl
 
@@ -57,9 +58,9 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 RUN sed -i "s/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"${OH_MY_ZSH_THEME}\"/g" "${HOST_HOME}"/.zshrc
 
 
-#########
-# ZIG
-#########
+######################
+# ZIG - Burrito dep
+######################
 
 USER root
 WORKDIR /
@@ -71,17 +72,21 @@ RUN mv zig-linux-x86_64-"${ZIG_VERSION}" /opt/zig-"${ZIG_VERSION}"
 ENV PATH=/opt/zig-"${ZIG_VERSION}":$PATH
 
 
-##########################
-# NODEJS STACK
-##########################
+######################
+# Burrito deps
+######################
+
+# Required when building for Windows
+RUN apt -y install --no-install-recommends p7zip-full
+
+
+###############################
+# NODEJS STACK - Phoenix dep
+###############################
 
 RUN curl -sL https://deb.nodesource.com/setup_"${NODE_VERSION}".x | sh -
 RUN apt update
 RUN apt install -y --no-install-recommends nodejs
-
-
-
-RUN apt install -y --no-install-recommends ssh
 
 
 ##########################
@@ -125,8 +130,6 @@ RUN apt -y install --no-install-recommends libgtk-3-dev
 RUN apt -y install --no-install-recommends libayatana-appindicator3-dev
 RUN apt -y install --no-install-recommends librsvg2-dev
 
-RUN apt -y install --no-install-recommends clang
-
 USER "${HOST_USER_NAME}"
 WORKDIR "${HOST_HOME}"
 
@@ -150,12 +153,37 @@ ENV APPIMAGE_EXTRACT_AND_RUN=1
 USER root
 WORKDIR /
 
-RUN apt -y install --no-install-recommends p7zip-full
+# @link https://github.com/tauri-apps/tauri/issues/6746#issuecomment-1516059273
+RUN apt -y install --no-install-recommends gcc-mingw-w64-x86-64
+
+# tauri dep to compile windows
+RUN apt -y install --no-install-recommends nsis
+
+RUN apt -y install --no-install-recommends g++-mingw-w64-x86-64
+RUN apt -y install --no-install-recommends lld llvm
+
+# trying to fix macos error when building
+# RUN apt -y install --no-install-recommends clang
 
 
 ########################
 # START - WORKSPACE
 ########################
+
+USER "${HOST_USER_NAME}"
+WORKDIR "${WORKSPACE_PATH}"
+
+# tauri dep to compile windows
+RUN bash -c "rustup target add x86_64-pc-windows-msvc"
+RUN bash -c "cargo install cargo-xwin"
+RUN bash -c "rustup toolchain install stable-x86_64-pc-windows-gnu"
+
+USER root
+WORKDIR /
+
+RUN apt -y install --no-install-recommends clang
+RUN apt -y install --no-install-recommends g++
+
 
 USER "${HOST_USER_NAME}"
 WORKDIR "${WORKSPACE_PATH}"
