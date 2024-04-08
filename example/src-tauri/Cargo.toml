@@ -2,7 +2,7 @@
 name = "example_desktop"
 version = "0.1.0"
 description = "A Phoenix Tauri App"
-authors = ["Example Desktop"]
+authors = ["example_desktop"]
 license = "Proprietary"
 homepage = "example.com"
 repository = "example.com"

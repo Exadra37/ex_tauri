@@ -9,7 +9,7 @@ defmodule ExTauri.Tauri.Install do
 	  scheme = ExTauri.get_config(:ex_tauri, :scheme, "http")
 	  host = ExTauri.get_config!(:ex_tauri, :host)
 	  port = ExTauri.get_config!(:ex_tauri, :port)
-	  version = ExTauri.get_config(:ex_tauri, :cli_version, latest_version())
+	  cli_version = ExTauri.get_config(:ex_tauri, :cli_version, latest_version())
 	  installation_path = installation_path()
 	  File.mkdir_p!(installation_path)
 
@@ -19,7 +19,7 @@ defmodule ExTauri.Tauri.Install do
 	    stderr_to_stdout: true
 	  ]
 
-	  System.cmd("cargo", ["install", "tauri-cli@#{version}", "--root", "."], opts)
+	  System.cmd("cargo", ["install", "tauri-cli@#{cli_version}", "--root", "."], opts)
 
 	  args =
 	    [

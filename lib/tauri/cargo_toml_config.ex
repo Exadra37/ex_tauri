@@ -15,9 +15,9 @@ defmodule ExTauri.Tauri.CargoTomlConfig do
 	end
 
 	defp build_cargo_toml_config() do
-	  app_name = ExTauri.get_config!(:ex_tauri, :app_name)
+	  app_name = ExTauri.get_project_config!(:app)
 	  package_name = build_package_name()
-	  version = ExTauri.get_config(:ex_tauri, :app_version, "0.1.0")
+	  app_version = ExTauri.get_project_config(:version, "0.1.0")
 	  description = ExTauri.get_config(:ex_tauri, :app_description, "A Phoenix Tauri App")
 	  authors = ExTauri.get_config(:ex_tauri, :app_authors, [app_name]) |> Enum.join("\",\"")
 	  app_license = ExTauri.get_config(:ex_tauri, :app_license, "Proprietary")
@@ -32,7 +32,7 @@ defmodule ExTauri.Tauri.CargoTomlConfig do
 	  """
 	  [package]
 	  name = "#{package_name}"
-	  version = "#{version}"
+	  version = "#{app_version}"
 	  description = "#{description}"
 	  authors = ["#{authors}"]
 	  license = "#{app_license}"

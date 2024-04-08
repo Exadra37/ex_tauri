@@ -6,8 +6,8 @@
     "distDir": "http://localhost:4000"
   },
   "package": {
-    "productName": "Example Desktop",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "productName": "Example Desktop"
   },
   "tauri": {
     "allowlist": {

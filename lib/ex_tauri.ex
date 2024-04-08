@@ -18,19 +18,41 @@ defmodule ExTauri do
     Supervisor.start_link([], strategy: :one_for_one)
   end
 
-  defdelegate get_config(app, key), to: ExTauri.AppConfig, as: :get
+  @doc """
+  Returns a :key from the :app configuration. If doesn't exist `default` is returned.
+  """
+  defdelegate get_config(app, key, default \\ nil), to: ExTauri.AppConfig, as: :get
 
-  defdelegate get_config(app, key, default), to: ExTauri.AppConfig, as: :get
-
+  @doc """
+  Returns a :key from the :app configuration. If doesn't exist it will raise.
+  """
   defdelegate get_config!(app, key), to: ExTauri.AppConfig, as: :get!
+
+  @doc """
+  Returns a :key from the `mix.exs` :project configuration. If doesn't exist `default` is returned.
+  """
+  defdelegate get_project_config(key, default \\ nil), to: ExTauri.AppConfig, as: :get_project
+
+  @doc """
+  Returns a :key from the `mix.exs` :project configuration. If doesn't exist it will raise.
+  """
+  defdelegate get_project_config!(key), to: ExTauri.AppConfig, as: :get_project!
 
   @doc """
   Returns the latest version of tauri available.
   """
   defdelegate latest_version, to: Tauri.Install
 
+  @doc """
+  Install Tauri in the Elixir project at `src-tauri`.
+  """
   defdelegate install(extra_args \\ []), to: Tauri.Install
 
+  @doc """
+  Returns the path to the executable.
+
+  The executable may not be available if it was not yet installed.
+  """
   defdelegate installation_path(), to: Tauri.Install
 
   @doc """
@@ -47,7 +69,7 @@ defmodule ExTauri do
   end
 
   @doc """
-  Runs the given command with `args`.
+  Bundles each release configures in your `mix.exs` as a Tauri release.
 
   The given args will be appended to the configured args.
   The task output will be streamed directly to stdio.
@@ -55,7 +77,21 @@ defmodule ExTauri do
   """
   defdelegate bundle_release(args), to: Tauri.BundleRelease, as: :build
 
+  @doc """
+  When bundling a release we may want to update the Tauri configuration based on the `:ex_tauri`
+  configuration at your `config/config.exs`:
+
+  * :app_name
+  * :window_title
+  * :fullscreen
+  * :height
+  * :height
+  * :resize
+
+  For example, to update the version.
+  """
   defdelegate upsert_tauri_json_config(burrito_bin_path), to: Tauri.JsonConfig, as: :upsert
+
 
   defdelegate override_cargo_toml_config(), to: Tauri.CargoTomlConfig, as: :override
 

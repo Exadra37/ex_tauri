@@ -92,6 +92,7 @@ defmodule ExampleDesktop.MixProject do
             # linux: [os: :linux, cpu: :x86_64],
             # linux_aarch64: [os: :linux, cpu: :aarch64],
             windows: [os: :windows, cpu: :x86_64, x_compiler_type: :msvc]
+            # windows: [os: :windows, cpu: :x86_64, x_compiler_type: :gnu]
           ]
         ]
       ]

@@ -8,6 +8,7 @@ defmodule ExTauri.Tauri.JsonConfig do
 
 	  Logger.warning("Upserting Tauri json config at: " <> path)
 
+	  app_version = ExTauri.get_project_config(:version, "0.1.0")
 	  app_name = ExTauri.get_config!(:ex_tauri, :app_name)
 	  window_title = Application.get_env(:ex_tauri, :window_title, app_name)
 	  fullscreen = Application.get_env(:ex_tauri, :fullscreen, false)
@@ -21,7 +22,10 @@ defmodule ExTauri.Tauri.JsonConfig do
 	  |> Jason.decode!()
 	  |> then(fn content ->
 	    content
-	    |> put_in(["package", "productName"], app_name)
+	    |> put_in(["package"], %{
+	    		productName: app_name,
+	    		version: app_version
+	    	})
 	    |> put_in(["tauri", "bundle", "externalBin"], [burrito_bin_path])
 	    |> put_in(
 	      ["tauri", "bundle", "identifier"],

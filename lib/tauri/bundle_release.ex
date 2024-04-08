@@ -7,8 +7,8 @@ defmodule ExTauri.Tauri.BundleRelease do
   end
 
   def build(args) when is_list(args) do
-    Mix.Project.config()
-    |> Keyword.get(:releases)
+    :releases
+    |> ExTauri.get_project_config()
     |> build_releases(args)
   end
 
@@ -89,7 +89,7 @@ defmodule ExTauri.Tauri.BundleRelease do
 
     args =
       args
-      |> add_platform_args(platform)
+      |> add_platform_args(platform, compiler_type)
       |> add_cargo_tauri_args(target_triple)
 
     opts = [
@@ -107,13 +107,13 @@ defmodule ExTauri.Tauri.BundleRelease do
     exit_code
   end
 
-  defp add_platform_args(args, :windows) do
+  defp add_platform_args(args, :windows, :msvc) do
     args
     |> List.insert_at( -1, "--runner")
     |> List.insert_at( -1, "cargo-xwin")
   end
 
-  defp add_platform_args(args, _platform), do: args
+  defp add_platform_args(args, _platform, _compiler_type), do: args
 
   defp add_cargo_tauri_args(args, target_triple) do
     args
