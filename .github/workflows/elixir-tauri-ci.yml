@@ -144,8 +144,10 @@ jobs:
           sudo apt -y install --no-install-recommends p7zip-full curl xz-utils
           curl https://ziglang.org/download/"${ZIG_VERSION}"/zig-linux-x86_64-"${ZIG_VERSION}".tar.xz -o zig.tar.xz
           tar -xf zig.tar.xz
-          mv zig-linux-x86_64-"${ZIG_VERSION}" /usr/local/bin/zig-"${ZIG_VERSION}"
+          mv zig-linux-x86_64-"${ZIG_VERSION}" /opt/zig-"${ZIG_VERSION}"
+          export PATH=/opt/zig-"${ZIG_VERSION}":$PATH
           echo $PATH
+          zig --version
 
       - name: Checkout code
         uses: actions/checkout@v4
