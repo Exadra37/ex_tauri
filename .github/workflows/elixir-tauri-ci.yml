@@ -6,9 +6,9 @@ name: "Elixir CI"
 on:
   push:
     branches: ["dev-ci-test"]
-  paths:
-      - 'example/**'
-      - '.github/workflows/elixir-tauri-ci.yml'
+    # paths:
+    #   - 'example/**'
+    #   - '.github/workflows/elixir-tauri-ci.yml'
 
   # pull_request:
   #   branches: [ "main"]
