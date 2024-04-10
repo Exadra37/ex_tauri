@@ -3,7 +3,7 @@ defmodule ExampleDesktopWeb.NotesLive do
 
   alias ExampleDesktop.Notes
 
-  def mount(params, session, socket) do
+  def mount(_params, _session, socket) do
     notes = Notes.list_notes()
 
     selected =
@@ -34,7 +34,7 @@ defmodule ExampleDesktopWeb.NotesLive do
       </div>
       <div class="grow">
         <div :if={@selected} class="flex flex-col">
-          <input type="text" phx-blur="update" phx-value-attr="title" value={@selected.title}/>
+          <input type="text" phx-blur="update" phx-value-attr="title" value={@selected.title} />
           <textarea phx-blur="update" phx-value-attr="content"><%=@selected.content%></textarea>
         </div>
         <div :if={!@selected} class="flex flex-col">

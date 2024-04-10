@@ -25,7 +25,6 @@ desktop-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-_build
 burrito_out
 deps
 *.db

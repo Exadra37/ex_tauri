@@ -27,7 +27,7 @@ config :example_desktop, ExampleDesktopWeb.Endpoint,
   url: [host: host, port: port, scheme: scheme],
   http: [
     port: port,
-    ip: {0, 0, 0, 0},
+    ip: {0, 0, 0, 0}
   ],
   render_errors: [
     formats: [html: ExampleDesktopWeb.ErrorHTML, json: ExampleDesktopWeb.ErrorJSON],
@@ -35,7 +35,6 @@ config :example_desktop, ExampleDesktopWeb.Endpoint,
   ],
   pubsub_server: ExampleDesktop.PubSub,
   live_view: [signing_salt: "NEH6yDum"]
-
 
 # Configure esbuild (the version is required)
 config :esbuild,

@@ -3,6 +3,8 @@
 use tauri::api::process::{Command, CommandEvent};
 
 fn main() {
+		let _ = fix_path_env::fix();
+
     tauri::Builder::default()
         .setup(|_app| {
             start_server();
@@ -17,7 +19,7 @@ fn start_server() {
         let (mut rx, mut _child) = Command::new_sidecar("desktop")
             .expect("failed to setup `desktop` sidecar")
             .spawn()
-            .expect("Failed to spawn packaged node");
+            .expect("Failed to spawn sidecar for desktop");
 
         while let Some(event) = rx.recv().await {
             if let CommandEvent::Stdout(line) = event {
@@ -33,12 +35,13 @@ fn check_server_started() {
     let port = "4000".to_string();
     let addr = format!("{}:{}", host, port);
     println!(
-        "Waiting for your phoenix dev server to start on {}...",
+        "Waiting for your phoenix dev server to start on {}",
         addr
     );
     loop {
+        println!(".");
         if std::net::TcpStream::connect(addr.clone()).is_ok() {
-           break;
+          break;
         }
         std::thread::sleep(sleep_interval);
     }

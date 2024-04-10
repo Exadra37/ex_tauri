@@ -1,0 +1,237 @@
+# @link https://fly.io/docs/elixir/advanced-guides/github-actions-elixir-ci-cd/
+# @link https://fly.io/phoenix-files/github-actions-for-elixir-ci/
+
+name: Elixir CI
+
+on:
+  push:
+    branches: ["dev-ci-test"]
+  paths:
+      - 'example/**'
+      - '.github/workflows/elixir-tauri-ci.yml'
+
+  # pull_request:
+  #   branches: [ "main"]
+
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   # cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+#   cancel-in-progress: ${{ !contains(github.ref, 'release/')}}
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    name: Tests on OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: ['26.2.3']
+        elixir: ['1.16.2']
+
+    env:
+      MIX_ENV: test
+
+    steps:
+      # Step: Setup Elixir + Erlang image as the base.
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+
+      # Step: Check out the code.
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step: Define how to cache deps. Restores existing cache if present.
+      - name: Cache deps
+        id: cache-deps
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-elixir-deps
+        with:
+          path: example/deps
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-
+
+      # Step: Define how to cache the `_build` directory. After the first run,
+      # this speeds up tests runs a lot. This includes not re-compiling our
+      # project's downloaded deps every run.
+      - name: Cache compiled build
+        id: cache-build
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-compiled-build
+        with:
+          path: example/_build
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lockkk') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}--mix-
+
+      # Step: Conditionally bust the cache when job is re-run.
+      # Sometimes, we may have issues with incremental builds that are fixed by
+      # doing a full recompile. In order to not waste dev time on such trivial
+      # issues (while also reaping the time savings of incremental builds for
+      # *most* day-to-day development), force a full recompile only on builds
+      # that are retried.
+      - name: Clean to rule out incremental build as a source of flakiness
+        if: github.run_attempt != '1'
+        run: |
+          cd example
+          mix deps.clean --all
+          mix clean
+        shell: sh
+
+      # Step: Download project dependencies. If unchanged, uses
+      # the cached version.
+      - name: Install dependencies
+        run: |
+          cd example
+          mix deps.get
+
+      # Step: Compile the project treating any warnings as errors.
+      # Customize this step if a different behavior is desired.
+      - name: Compiles without warnings
+        run: |
+          cd example
+          mix compile --warnings-as-errors
+
+      # Step: Check that the checked in code has already been formatted.
+      # This step fails if something was found unformatted.
+      # Customize this step as desired.
+      - name: Check Formatting
+        run: |
+          cd example
+          mix format --check-formatted
+
+      # Step: Execute the tests.
+      - name: Run tests
+        run: |
+          cd example
+          mix test --trace --slowest 10
+
+  burrito-release:
+    runs-on: ubuntu-latest
+
+    name: Build Releases with Burrito on OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+
+    strategy:
+      matrix:
+        otp: ['26.2.3']
+        elixir: ['1.16.2']
+
+    needs:
+      - tests
+
+    permissions:
+      contents: write
+
+    env:
+      MIX_ENV: prod
+
+    steps:
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          cd example
+          mix deps.get --only prod
+
+      - name: Mix Compile # without warnings
+        # run: mix compile --warnings-as-errors
+        run: |
+          cd example
+          mix compile
+
+      - name: Mix Check Formatting
+        run: |
+          cd example
+          mix format --check-formatted
+
+      - name: Burrito Releases
+        run: |
+          cd example
+          mix ex_tauri build
+
+      - name: Temporarily Save the Burrito Release
+        uses: actions/upload-artifact@v4
+          with:
+            name: burrito-releases
+            path: example/burrito_out
+            retention-days: 1
+            overwrite: true
+
+  tauri-release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - platform: 'macos-latest' # for Arm based macs (M1 and above).
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest' # for Intel based macs.
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.settings.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.settings.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+        # sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
+        # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'yarn' # Set this to npm, yarn or pnpm.
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+          targets: ${{ matrix.settings.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Retrieve Saved Burrito Releases
+        uses: actions/upload-artifact@v4
+          with:
+            name: burrito-releases
+            path: example/burrito_out
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
+          releaseName: 'App v__VERSION__'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.settings.args }}

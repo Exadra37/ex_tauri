@@ -22,7 +22,8 @@ database_filename =
       "example_desktop.db"
   end
 
-database_path = Path.expand("#{database_dir}/#{config_env()}/#{database_filename}", Path.dirname(__DIR__))
+database_path =
+  Path.expand("#{database_dir}/#{config_env()}/#{database_filename}", Path.dirname(__DIR__))
 
 # For SQLite3:
 config :example_desktop, ExampleDesktop.Repo,
