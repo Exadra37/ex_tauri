@@ -137,6 +137,14 @@ jobs:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
 
+      - name: install dependencies (ubuntu only)
+        run: |
+          sudo apt update
+          apt -y install --no-install-recommends p7zip-full curl xz
+          curl https://ziglang.org/download/"${ZIG_VERSION}"/zig-linux-x86_64-"${ZIG_VERSION}".tar.xz -o zig.tar.xz
+          mv zig-linux-x86_64-"${ZIG_VERSION}" /usr/local/bin/zig-"${ZIG_VERSION}"
+          echo $PATH
+
       - name: Checkout code
         uses: actions/checkout@v4
 
