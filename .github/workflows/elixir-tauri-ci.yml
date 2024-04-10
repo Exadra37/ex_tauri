@@ -147,7 +147,8 @@ jobs:
           mv zig-linux-x86_64-"${ZIG_VERSION}" /opt/zig-"${ZIG_VERSION}"
           export PATH=/opt/zig-"${ZIG_VERSION}":$PATH
           echo $PATH
-          zig --version
+          zig version
+          xz --version
 
       - name: Checkout code
         uses: actions/checkout@v4
