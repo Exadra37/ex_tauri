@@ -176,6 +176,7 @@ jobs:
           echo $PATH
           zig version
           xz --version
+          mix ex_tauri.install
           mix ex_tauri build
 
       - name: Temporarily Save the Burrito Release
