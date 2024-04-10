@@ -129,6 +129,7 @@ jobs:
 
     env:
       MIX_ENV: prod
+      ZIG_VERSION: 0.11.0
 
     steps:
       - name: Set up Elixir
