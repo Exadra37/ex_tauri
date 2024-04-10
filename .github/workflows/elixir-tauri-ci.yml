@@ -172,6 +172,10 @@ jobs:
       - name: Burrito Releases
         run: |
           cd example
+          export PATH=/opt/zig-"${ZIG_VERSION}":$PATH
+          echo $PATH
+          zig version
+          xz --version
           mix ex_tauri build
 
       - name: Temporarily Save the Burrito Release
