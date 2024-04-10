@@ -166,11 +166,11 @@ jobs:
 
       - name: Temporarily Save the Burrito Release
         uses: actions/upload-artifact@v4
-          with:
-            name: burrito-releases
-            path: example/burrito_out
-            retention-days: 1
-            overwrite: true
+        with:
+          name: burrito-releases
+          path: example/burrito_out
+          retention-days: 1
+          overwrite: true
 
   tauri-release:
     permissions:
@@ -221,9 +221,9 @@ jobs:
 
       - name: Retrieve Saved Burrito Releases
         uses: actions/upload-artifact@v4
-          with:
-            name: burrito-releases
-            path: example/burrito_out
+        with:
+          name: burrito-releases
+          path: example/burrito_out
 
       - uses: tauri-apps/tauri-action@v0
         env:
