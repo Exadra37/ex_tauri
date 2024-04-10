@@ -6,17 +6,14 @@ name: "Elixir CI"
 on:
   push:
     branches: ["dev-ci-test"]
-    # paths:
-    #   - 'example/**'
-    #   - '.github/workflows/elixir-tauri-ci.yml'
 
   # pull_request:
   #   branches: [ "main"]
 
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.ref }}
-#   # cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-#   cancel-in-progress: ${{ !contains(github.ref, 'release/')}}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ !contains(github.ref, 'release/')}}
 
 permissions:
   contents: read
@@ -173,6 +170,9 @@ jobs:
           overwrite: true
 
   tauri-release:
+    needs:
+      - tests
+      - burrito-release
     permissions:
       contents: write
     strategy:
