@@ -1,4 +1,4 @@
-name: Elixir CI
+name: "Elixir CI"
 
 # @link https://fly.io/docs/elixir/advanced-guides/github-actions-elixir-ci-cd/
 # @link https://fly.io/phoenix-files/github-actions-for-elixir-ci/
