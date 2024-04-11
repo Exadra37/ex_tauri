@@ -91,7 +91,7 @@ defmodule ExampleDesktop.MixProject do
             # "x86_64-unknown-linux-gnu": [os: :linux, cpu: :x86_64],
             # macos: [os: :darwin, cpu: :x86_64],
             # macos_m1: [os: :darwin, cpu: :aarch64],
-            linux: [os: :linux, cpu: :x86_64, x_compiler_type: :gnu
+            linux: [os: :linux, cpu: :x86_64, x_compiler_type: :gnu],
             # linux_aarch64: [os: :linux, cpu: :aarch64],
             # windows: [os: :windows, cpu: :x86_64, x_compiler_type: :msvc]
             # windows: [os: :windows, cpu: :x86_64, x_compiler_type: :gnu]
