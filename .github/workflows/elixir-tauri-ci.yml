@@ -169,17 +169,17 @@ jobs:
       # Step: Define how to cache the `_build` directory. After the first run,
       # this speeds up tests runs a lot. This includes not re-compiling our
       # project's downloaded deps every run.
-      # - name: Mix Cache compiled build
-      #   id: burrito-cache-build
-      #   uses: actions/cache@v3
-      #   env:
-      #     cache-name: burrito-cache-compiled-build
-      #   with:
-      #     path: example/_build
-      #     key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lockkk') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-
-      #       ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}--mix-
+      - name: Mix Cache compiled build
+        id: burrito-cache-build
+        uses: actions/cache@v3
+        env:
+          cache-name: burrito-cache-compiled-build
+        with:
+          path: example/_build
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lockkk') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}--mix-
 
       # Step: Conditionally bust the cache when job is re-run.
       # Sometimes, we may have issues with incremental builds that are fixed by
@@ -280,7 +280,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: './example/src-tauri -> target'
 
       - name: Retrieve Saved Burrito Releases
         uses: actions/download-artifact@v4

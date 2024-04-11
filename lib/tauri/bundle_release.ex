@@ -58,7 +58,7 @@ defmodule ExTauri.Tauri.BundleRelease do
   end
 
   defp burrito_wrap_release(release_name) do
-    Mix.Task.run("release", [release_name])
+    Mix.Task.run("release", [release_name, "--override"])
     release_name
   end
 
