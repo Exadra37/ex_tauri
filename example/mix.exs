@@ -79,7 +79,7 @@ defmodule ExampleDesktop.MixProject do
 
   defp releases do
     [
-      desktop: [
+      desktop_example_desktop: [
         steps: [:assemble, &Burrito.wrap/1],
         burrito: [
           # targets: [
