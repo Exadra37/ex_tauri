@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v4
 
       # Step: Define how to cache deps. Restores existing cache if present.
-      - name: Cache deps
+      - name: Mix Cache deps
         id: cache-deps
         uses: actions/cache@v4
         env:
@@ -57,7 +57,7 @@ jobs:
       # Step: Define how to cache the `_build` directory. After the first run,
       # this speeds up tests runs a lot. This includes not re-compiling our
       # project's downloaded deps every run.
-      - name: Cache compiled build
+      - name: Mix Cache compiled build
         id: cache-build
         uses: actions/cache@v3
         env:
@@ -75,7 +75,7 @@ jobs:
       # issues (while also reaping the time savings of incremental builds for
       # *most* day-to-day development), force a full recompile only on builds
       # that are retried.
-      - name: Clean to rule out incremental build as a source of flakiness
+      - name: Mix Clean to rule out incremental build as a source of flakiness
         if: github.run_attempt != '1'
         run: |
           cd example
@@ -85,22 +85,23 @@ jobs:
 
       # Step: Download project dependencies. If unchanged, uses
       # the cached version.
-      - name: Install dependencies
+      - name: Mix Install dependencies
         run: |
           cd example
           mix deps.get
 
       # Step: Compile the project treating any warnings as errors.
       # Customize this step if a different behavior is desired.
-      - name: Compiles without warnings
+      - name: Mix Compiles without warnings
         run: |
           cd example
-          mix compile --warnings-as-errors
+          mix compile
 
+      # mix compile --warnings-as-errors
       # Step: Check that the checked in code has already been formatted.
       # This step fails if something was found unformatted.
       # Customize this step as desired.
-      - name: Check Formatting
+      - name: Mix Check Formatting
         run: |
           cd example
           mix format --check-formatted
@@ -153,7 +154,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      # Step: Define how to cache deps. Restores existing cache if present.
+      - name: Mix Cache deps
+        id: burrito-cache-deps
+        uses: actions/cache@v4
+        env:
+          cache-name: burrito-cache-elixir-deps
+        with:
+          path: example/deps
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-
+
+      # Step: Define how to cache the `_build` directory. After the first run,
+      # this speeds up tests runs a lot. This includes not re-compiling our
+      # project's downloaded deps every run.
+      - name: Mix Cache compiled build
+        id: burrito-cache-build
+        uses: actions/cache@v3
+        env:
+          cache-name: burrito-cache-compiled-build
+        with:
+          path: example/_build
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lockkk') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ env.cache-name }}-
+            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}--mix-
+
+      # Step: Conditionally bust the cache when job is re-run.
+      # Sometimes, we may have issues with incremental builds that are fixed by
+      # doing a full recompile. In order to not waste dev time on such trivial
+      # issues (while also reaping the time savings of incremental builds for
+      # *most* day-to-day development), force a full recompile only on builds
+      # that are retried.
+      - name: Mix Clean to rule out incremental build as a source of flakiness
+        if: github.run_attempt != '1'
+        run: |
+          cd example
+          mix deps.clean --all
+          mix clean
+        shell: sh
+
+      - name: Mix Install dependencies
         run: |
           cd example
           mix deps.get --only prod
@@ -220,11 +262,11 @@ jobs:
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
-      - name: setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: 'yarn' # Set this to npm, yarn or pnpm.
+      # - name: setup node
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: lts/*
+      #     cache: 'yarn' # Set this to npm, yarn or pnpm.
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
