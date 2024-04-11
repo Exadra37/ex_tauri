@@ -17,11 +17,11 @@ defmodule ExTauri.Tauri.BundleRelease do
   end
 
   defp build_releases(releases, args) do
-    dbg(releases)
-
     with [] <- validate_releases_config(releases) do
       releases
       |> Enum.map(fn {release_name, release_config} ->build_release(release_name, release_config, args) end)
+
+      0
 
     else
       errors ->
@@ -87,24 +87,24 @@ defmodule ExTauri.Tauri.BundleRelease do
     burrito_bin_path = build_burrito_output_partial_path(release_name)
     ExTauri.upsert_tauri_json_config(burrito_bin_path)
 
-    args =
-      args
-      |> add_platform_args(platform, compiler_type)
-      |> add_cargo_tauri_args(target_triple)
+    # args =
+    #   args
+    #   |> add_platform_args(platform, compiler_type)
+    #   |> add_cargo_tauri_args(target_triple)
 
-    opts = [
-      into: IO.stream(:stdio, :line),
-      stderr_to_stdout: true,
-    ]
+    # opts = [
+    #   into: IO.stream(:stdio, :line),
+    #   stderr_to_stdout: true,
+    # ]
 
-    Logger.info("Running command `bin/cargo_tauri` with args `" <> inspect(args) <> "` and opts `" <> inspect(opts) <> "`")
+    # Logger.info("Running command `bin/cargo_tauri` with args `" <> inspect(args) <> "` and opts `" <> inspect(opts) <> "`")
 
-    {_, exit_code} =
-       [ExTauri.installation_path(), "bin", "cargo-tauri"]
-       |> Path.join()
-       |> System.cmd(args, opts)
+    # {_, exit_code} =
+    #    [ExTauri.installation_path(), "bin", "cargo-tauri"]
+    #    |> Path.join()
+    #    |> System.cmd(args, opts)
 
-    exit_code
+    # exit_code
   end
 
   defp add_platform_args(args, :windows, :msvc) do
