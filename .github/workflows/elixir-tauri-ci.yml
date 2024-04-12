@@ -224,6 +224,14 @@ jobs:
       # - name: Display artifacts to upload
       #   run: ls -al example/burrito_out
 
+      - name: Temporarily Save the src-tauri dir
+        uses: actions/upload-artifact@v4
+        with:
+          name: src-tauri
+          path: example/src-tauri
+          retention-days: 1
+          overwrite: true
+
       - name: Temporarily Save the Burrito Release
         uses: actions/upload-artifact@v4
         with:
@@ -271,6 +279,21 @@ jobs:
       #     node-version: lts/*
       #     cache: 'yarn' # Set this to npm, yarn or pnpm.
 
+      - name: Retrieve src-tauri dir
+        uses: actions/download-artifact@v4
+        with:
+          name: src-tauri
+          path: example/src-tauri
+
+      - name: Retrieve Saved Burrito Releases
+        uses: actions/download-artifact@v4
+        with:
+          name: burrito-releases
+          path: example/burrito_out
+
+      - name: Display downloaded artifacts
+        run: ls -al example/burrito_out
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -282,14 +305,11 @@ jobs:
         with:
           workspaces: './example/src-tauri -> target'
 
-      - name: Retrieve Saved Burrito Releases
+      - name: Retrieve src-tauri dir
         uses: actions/download-artifact@v4
         with:
-          name: burrito-releases
-          path: example/burrito_out
-
-      - name: Display downloaded artifacts
-        run: ls -al example/burrito_out
+          name: src-tauri
+          path: example/src-tauri
 
       - uses: tauri-apps/tauri-action@v0
         env:
